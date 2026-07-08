@@ -17,13 +17,20 @@ import {
 } from 'lucide-react';
 import { DrawOverlay } from './DrawOverlay.jsx';
 import { StudioScene } from './StudioScene.jsx';
-import { useStudioStore } from './store.js';
+import { exportPresets, materialPresets, useStudioStore } from './store.js';
 
 const shapes = [
   { id: 'sphere', label: 'Sphere', icon: Circle },
   { id: 'cube', label: 'Cube', icon: Box },
   { id: 'star', label: 'Star', icon: Sparkles },
   { id: 'blob', label: 'Blob', icon: Waves },
+  { id: 'capsule', label: 'Capsule', icon: Smartphone },
+  { id: 'torus', label: 'Torus', icon: Circle },
+  { id: 'cylinder', label: 'Cylinder', icon: Box },
+  { id: 'cone', label: 'Cone', icon: Hexagon },
+  { id: 'gem', label: 'Gem', icon: Sparkles },
+  { id: 'heart', label: 'Heart', icon: Circle },
+  { id: 'coin', label: 'Coin', icon: Circle },
 ];
 
 const assistModes = [
@@ -34,6 +41,18 @@ const assistModes = [
   { id: 'hard', label: 'Hard edge' },
   { id: 'phone', label: 'Phone slab' },
 ];
+
+const depthProfiles = [
+  { id: 'flat', label: 'Flat slab' },
+  { id: 'puffy', label: 'Puffy sticker' },
+  { id: 'domed', label: 'Soft dome' },
+  { id: 'ridge', label: 'Ribbed depth' },
+];
+
+const materialOptions = Object.entries(materialPresets).map(([id, preset]) => ({
+  id,
+  label: preset.label,
+}));
 
 function RangeControl({ label, value, min, max, step, onChange }) {
   return (
@@ -86,11 +105,13 @@ function AdvancedControls() {
   const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
   const bevelSize = useStudioStore((state) => state.bevelSize);
   const drawRefine = useStudioStore((state) => state.drawRefine);
+  const exportPreset = useStudioStore((state) => state.exportPreset);
   const setAutoRotate = useStudioStore((state) => state.setAutoRotate);
   const setBlob = useStudioStore((state) => state.setBlob);
   const setExtrusionDepth = useStudioStore((state) => state.setExtrusionDepth);
   const setBevelSize = useStudioStore((state) => state.setBevelSize);
   const setDrawRefine = useStudioStore((state) => state.setDrawRefine);
+  const setExportPreset = useStudioStore((state) => state.setExportPreset);
 
   useControls(
     'Fine tune',
@@ -140,8 +161,25 @@ function AdvancedControls() {
         label: 'Sketch smooth',
         onChange: (value) => setDrawRefine('smoothness', value),
       },
+      sketchInflate: {
+        value: drawRefine.inflate,
+        min: 0,
+        max: 1,
+        step: 0.01,
+        label: 'Inflate',
+        onChange: (value) => setDrawRefine('inflate', value),
+      },
     },
-    [autoRotate, blob.intensity, blob.frequency, extrusionDepth, bevelSize, drawRefine.smoothness],
+    [
+      autoRotate,
+      blob.intensity,
+      blob.frequency,
+      extrusionDepth,
+      bevelSize,
+      drawRefine.smoothness,
+      drawRefine.inflate,
+      exportPreset,
+    ],
   );
 
   return null;
@@ -150,12 +188,14 @@ function AdvancedControls() {
 function ControlPanel() {
   const mode = useStudioStore((state) => state.mode);
   const shape = useStudioStore((state) => state.shape);
+  const materialPreset = useStudioStore((state) => state.materialPreset);
   const material = useStudioStore((state) => state.material);
   const lighting = useStudioStore((state) => state.lighting);
   const blob = useStudioStore((state) => state.blob);
   const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
   const bevelSize = useStudioStore((state) => state.bevelSize);
   const drawRefine = useStudioStore((state) => state.drawRefine);
+  const exportPreset = useStudioStore((state) => state.exportPreset);
   const drawPoints = useStudioStore((state) => state.drawPoints);
   const outlinePoints = useStudioStore((state) => state.outlinePoints);
   const autoRotate = useStudioStore((state) => state.autoRotate);
@@ -169,7 +209,9 @@ function ControlPanel() {
   const setExtrusionDepth = useStudioStore((state) => state.setExtrusionDepth);
   const setBevelSize = useStudioStore((state) => state.setBevelSize);
   const setDrawRefine = useStudioStore((state) => state.setDrawRefine);
+  const setExportPreset = useStudioStore((state) => state.setExportPreset);
   const setAutoRotate = useStudioStore((state) => state.setAutoRotate);
+  const applyMaterialPreset = useStudioStore((state) => state.applyMaterialPreset);
   const convertDrawToMesh = useStudioStore((state) => state.convertDrawToMesh);
   const clearDrawing = useStudioStore((state) => state.clearDrawing);
   const editDrawing = useStudioStore((state) => state.editDrawing);
@@ -303,11 +345,33 @@ function ControlPanel() {
             value={drawRefine.cornerRadius}
             onChange={(value) => setDrawRefine('cornerRadius', value)}
           />
+          <SelectControl
+            label="Depth type"
+            value={drawRefine.depthProfile}
+            options={depthProfiles}
+            onChange={(value) => setDrawRefine('depthProfile', value)}
+          />
+          <RangeControl
+            label="Inflate"
+            min={0}
+            max={1}
+            step={0.01}
+            value={drawRefine.inflate}
+            onChange={(value) => setDrawRefine('inflate', value)}
+          />
         </section>
       )}
 
       <section className="panel-section">
         <h2>Material</h2>
+        <SelectControl
+          label="Preset"
+          value={materialPreset}
+          options={[{ id: 'custom', label: 'Custom' }, ...materialOptions]}
+          onChange={(value) => {
+            if (value !== 'custom') applyMaterialPreset(value);
+          }}
+        />
         <label className="color-row">
           <span>Color</span>
           <input
@@ -393,6 +457,15 @@ function ControlPanel() {
       </section>
 
       <div className="export-stack">
+        <section className="panel-section export-options">
+          <h2>Export</h2>
+          <SelectControl
+            label="Preset"
+            value={exportPreset}
+            options={exportPresets}
+            onChange={setExportPreset}
+          />
+        </section>
         <button className="export-button" onClick={exportPng}>
           <Download size={18} aria-hidden="true" />
           Export transparent PNG

@@ -40,6 +40,64 @@ function StarGeometry() {
   return <primitive object={geometry} attach="geometry" />;
 }
 
+function HeartGeometry() {
+  const geometry = useMemo(() => {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, -0.82);
+    shape.bezierCurveTo(-1.15, -0.2, -1.18, 0.58, -0.55, 0.72);
+    shape.bezierCurveTo(-0.2, 0.8, 0, 0.48, 0, 0.3);
+    shape.bezierCurveTo(0, 0.48, 0.2, 0.8, 0.55, 0.72);
+    shape.bezierCurveTo(1.18, 0.58, 1.15, -0.2, 0, -0.82);
+    const geo = new THREE.ExtrudeGeometry(shape, {
+      depth: 0.48,
+      bevelEnabled: true,
+      bevelSegments: 10,
+      bevelSize: 0.06,
+      bevelThickness: 0.08,
+      curveSegments: 32,
+    });
+    geo.center();
+    return geo;
+  }, []);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return <primitive object={geometry} attach="geometry" />;
+}
+
+function applyDepthProfile(geometry, profile, inflate) {
+  if (profile === 'flat' || inflate <= 0) return;
+  geometry.computeBoundingBox();
+  const bounds = geometry.boundingBox;
+  const centerX = (bounds.min.x + bounds.max.x) / 2;
+  const centerY = (bounds.min.y + bounds.max.y) / 2;
+  const maxRadius = Math.max(
+    0.01,
+    Math.hypot(bounds.max.x - centerX, bounds.max.y - centerY),
+  );
+  const position = geometry.attributes.position;
+  const vertex = new THREE.Vector3();
+
+  for (let index = 0; index < position.count; index += 1) {
+    vertex.fromBufferAttribute(position, index);
+    const radial = Math.min(1, Math.hypot(vertex.x - centerX, vertex.y - centerY) / maxRadius);
+    const falloff = Math.max(0, 1 - radial * radial);
+    const side = vertex.z >= 0 ? 1 : -1;
+    let zOffset = 0;
+
+    if (profile === 'puffy') zOffset = side * inflate * 0.34 * falloff;
+    if (profile === 'domed') zOffset = side * inflate * 0.22 * Math.sqrt(falloff);
+    if (profile === 'ridge') {
+      const ridge = Math.abs(Math.sin((vertex.x + vertex.y) * 4.6));
+      zOffset = side * inflate * 0.18 * falloff * ridge;
+    }
+
+    position.setXYZ(index, vertex.x, vertex.y, vertex.z + zOffset);
+  }
+
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+}
+
 function BlobGeometry({ intensity, frequency }) {
   const geometry = useMemo(() => {
     const geo = new THREE.SphereGeometry(1.12, 96, 64);
@@ -69,7 +127,7 @@ function BlobGeometry({ intensity, frequency }) {
   return <primitive object={geometry} attach="geometry" />;
 }
 
-function OutlineGeometry({ points, depth, bevelSize }) {
+function OutlineGeometry({ points, depth, bevelSize, depthProfile, inflate }) {
   const geometry = useMemo(() => {
     if (points.length < 4) return new THREE.BoxGeometry(0.01, 0.01, 0.01);
     const shape = new THREE.Shape();
@@ -87,8 +145,9 @@ function OutlineGeometry({ points, depth, bevelSize }) {
       curveSegments: 24,
     });
     geo.center();
+    applyDepthProfile(geo, depthProfile, inflate);
     return geo;
-  }, [points, depth, bevelSize]);
+  }, [points, depth, bevelSize, depthProfile, inflate]);
 
   useEffect(() => () => geometry.dispose(), [geometry]);
   return <primitive object={geometry} attach="geometry" />;
@@ -103,9 +162,19 @@ function ShapeGeometry() {
   const outlinePoints = useStudioStore((state) => state.outlinePoints);
   const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
   const bevelSize = useStudioStore((state) => state.bevelSize);
+  const depthProfile = useStudioStore((state) => state.drawRefine.depthProfile);
+  const inflate = useStudioStore((state) => state.drawRefine.inflate);
 
   if (mode === 'draw' && outlinePoints.length >= 4) {
-    return <OutlineGeometry points={outlinePoints} depth={extrusionDepth} bevelSize={bevelSize} />;
+    return (
+      <OutlineGeometry
+        points={outlinePoints}
+        depth={extrusionDepth}
+        bevelSize={bevelSize}
+        depthProfile={depthProfile}
+        inflate={inflate}
+      />
+    );
   }
 
   if (mode === 'draw' && drawPoints.length >= 4) {
@@ -114,16 +183,74 @@ function ShapeGeometry() {
         points={refineDrawing(drawPoints, drawRefine)}
         depth={extrusionDepth}
         bevelSize={bevelSize}
+        depthProfile={depthProfile}
+        inflate={inflate}
       />
     );
   }
 
   if (shape === 'cube') return <boxGeometry args={[1.75, 1.75, 1.75]} />;
   if (shape === 'star') return <StarGeometry />;
+  if (shape === 'heart') return <HeartGeometry />;
+  if (shape === 'capsule') return <capsuleGeometry args={[0.64, 1.05, 32, 64]} />;
+  if (shape === 'torus') return <torusGeometry args={[0.78, 0.28, 48, 128]} />;
+  if (shape === 'cylinder') return <cylinderGeometry args={[0.9, 0.9, 1.45, 96]} />;
+  if (shape === 'cone') return <coneGeometry args={[1, 1.65, 96]} />;
+  if (shape === 'gem') return <cylinderGeometry args={[0.42, 1.05, 1.55, 6]} />;
+  if (shape === 'coin') return <cylinderGeometry args={[1.1, 1.1, 0.34, 96]} />;
   if (shape === 'blob') {
     return <BlobGeometry intensity={blob.intensity} frequency={blob.frequency} />;
   }
   return <sphereGeometry args={[1.12, 96, 64]} />;
+}
+
+function createTexture(style) {
+  if (style === 'none') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (style === 'wood') {
+    for (let y = 0; y < canvas.height; y += 1) {
+      const wave = Math.sin(y * 0.05) * 18 + Math.sin(y * 0.013) * 34;
+      ctx.fillStyle = `rgba(${150 + wave}, ${92 + wave * 0.35}, ${42 + wave * 0.12}, 0.55)`;
+      ctx.fillRect(0, y, canvas.width, 1);
+    }
+  }
+
+  if (style === 'foam' || style === 'clay' || style === 'rubber') {
+    const density = style === 'foam' ? 1800 : 900;
+    for (let index = 0; index < density; index += 1) {
+      const x = Math.random() * canvas.width;
+      const y = Math.random() * canvas.height;
+      const alpha = style === 'rubber' ? 0.08 : 0.13;
+      ctx.fillStyle = `rgba(30, 33, 31, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(x, y, Math.random() * 1.8 + 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  if (style === 'holo') {
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, '#ff91c8');
+    gradient.addColorStop(0.25, '#89f7fe');
+    gradient.addColorStop(0.5, '#fdf06f');
+    gradient.addColorStop(0.75, '#a8ff78');
+    gradient.addColorStop(1, '#8f8cff');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(style === 'wood' ? 1.4 : 2.6, style === 'wood' ? 1.8 : 2.6);
+  return texture;
 }
 
 function PhoneFaceDetails() {
@@ -157,6 +284,12 @@ function StickerMesh() {
   const autoRotate = useStudioStore((state) => state.autoRotate);
   const recording = useStudioStore((state) => state.recording);
   const meshRef = useRef(null);
+  const texture = useMemo(
+    () => createTexture(material.textureStyle),
+    [material.textureStyle],
+  );
+
+  useEffect(() => () => texture?.dispose(), [texture]);
 
   useFrame((state, delta) => {
     if (!meshRef.current) return;
@@ -175,6 +308,9 @@ function StickerMesh() {
       <ShapeGeometry />
       <meshPhysicalMaterial
         color={material.color}
+        map={texture}
+        bumpMap={texture}
+        bumpScale={material.textureStyle === 'none' ? 0 : 0.045}
         roughness={material.roughness}
         metalness={material.metalness}
         transmission={material.transmission}
@@ -242,18 +378,22 @@ function SceneContent() {
 }
 
 export function StudioScene() {
-  const setRendererCanvas = useStudioStore((state) => state.setRendererCanvas);
+  const setRendererContext = useStudioStore((state) => state.setRendererContext);
 
   return (
     <Canvas
       shadows
+      dpr={[1, 2.5]}
       camera={{ position: [0, 0.6, 4.5], fov: 42 }}
-      gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
-      onCreated={({ gl, scene }) => {
+      gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true, powerPreference: 'high-performance' }}
+      onCreated={({ gl, scene, camera }) => {
         gl.setClearAlpha(0);
         gl.setClearColor(0x000000, 0);
+        gl.outputColorSpace = THREE.SRGBColorSpace;
+        gl.toneMapping = THREE.ACESFilmicToneMapping;
+        gl.toneMappingExposure = 1.08;
         scene.background = null;
-        setRendererCanvas(gl.domElement);
+        setRendererContext({ gl, scene, camera });
       }}
     >
       <SceneContent />

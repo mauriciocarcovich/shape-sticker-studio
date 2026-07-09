@@ -173,7 +173,15 @@ h2 {
 }
 
 .action-grid {
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.draw-state {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .plane-switch {
@@ -191,6 +199,11 @@ h2 {
   border-color: rgba(32, 191, 143, 0.55);
   background: #dff7ee;
   color: #0c654a;
+}
+
+.plane-switch button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
 }
 
 .primary-action {

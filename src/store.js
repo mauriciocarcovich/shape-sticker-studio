@@ -13,6 +13,16 @@ export const transparentLandscapeExport = {
   transparent: true,
 };
 
+function buildCommittedDrawing(drawPoints, drawRefine, index) {
+  const points = refineDrawing(drawPoints, drawRefine);
+  if (points.length < 4) return null;
+  return {
+    id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${index}`,
+    points,
+    plane: drawRefine.plane,
+  };
+}
+
 export const materialPresets = {
   mint: {
     label: 'Mint gel',
@@ -245,11 +255,17 @@ export const useStudioStore = create((set, get) => ({
   recording: false,
   videoStatus: '',
   drawPoints: [],
+  drawingActive: true,
   outlinePoints: [],
   outlinePlane: 'xy',
   committedDrawings: [],
   rendererContext: null,
-  setMode: (mode) => set({ mode }),
+  setMode: (mode) =>
+    set((state) => ({
+      mode,
+      drawingActive:
+        mode === 'draw' && state.committedDrawings.length === 0 ? true : state.drawingActive,
+    })),
   setShape: (shape) => set({ shape, mode: 'preset' }),
   applyMaterialPreset: (presetId) =>
     set((state) => ({
@@ -274,6 +290,7 @@ export const useStudioStore = create((set, get) => ({
   setDrawPoints: (drawPoints) => set({ drawPoints }),
   appendDrawPoint: (point) =>
     set((state) => {
+      if (!state.drawingActive) return state;
       const last = state.drawPoints[state.drawPoints.length - 1];
       if (last) {
         const distance = Math.hypot(point.x - last.x, point.y - last.y);
@@ -283,25 +300,42 @@ export const useStudioStore = create((set, get) => ({
     }),
   convertDrawToMesh: () => {
     const { drawPoints, drawRefine } = get();
-    const points = refineDrawing(drawPoints, drawRefine);
-    if (points.length < 4) return;
+    const drawing = buildCommittedDrawing(drawPoints, drawRefine, get().committedDrawings.length);
+    if (!drawing) return;
     set((state) => ({
-      committedDrawings: [
-        ...state.committedDrawings,
-        {
-          id: crypto.randomUUID?.() ?? `${Date.now()}-${state.committedDrawings.length}`,
-          points,
-          plane: drawRefine.plane,
-        },
-      ],
-      outlinePoints: points,
-      outlinePlane: drawRefine.plane,
+      committedDrawings: [...state.committedDrawings, drawing],
+      outlinePoints: drawing.points,
+      outlinePlane: drawing.plane,
       drawPoints: [],
       mode: 'draw',
+      drawingActive: true,
     }));
   },
+  finishDrawing: () => {
+    const { drawPoints, drawRefine, committedDrawings } = get();
+    const drawing = buildCommittedDrawing(drawPoints, drawRefine, committedDrawings.length);
+    if (!drawing) {
+      set({ drawPoints: [], mode: 'draw', drawingActive: false });
+      return;
+    }
+    set((state) => ({
+      committedDrawings: [...state.committedDrawings, drawing],
+      outlinePoints: drawing.points,
+      outlinePlane: drawing.plane,
+      drawPoints: [],
+      mode: 'draw',
+      drawingActive: false,
+    }));
+  },
+  resumeDrawing: () => set({ mode: 'draw', drawingActive: true }),
   clearDrawing: () =>
-    set({ drawPoints: [], outlinePoints: [], outlinePlane: 'xy', committedDrawings: [] }),
+    set({
+      drawPoints: [],
+      drawingActive: true,
+      outlinePoints: [],
+      outlinePlane: 'xy',
+      committedDrawings: [],
+    }),
   editDrawing: () =>
     set((state) => {
       const committedDrawings = state.committedDrawings.slice(0, -1);
@@ -310,6 +344,7 @@ export const useStudioStore = create((set, get) => ({
         committedDrawings,
         outlinePoints: latest?.points ?? [],
         outlinePlane: latest?.plane ?? 'xy',
+        drawingActive: true,
       };
     }),
   setRendererContext: (rendererContext) => set({ rendererContext }),

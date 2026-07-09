@@ -199,6 +199,7 @@ function ControlPanel() {
   const bevelSize = useStudioStore((state) => state.bevelSize);
   const drawRefine = useStudioStore((state) => state.drawRefine);
   const drawPoints = useStudioStore((state) => state.drawPoints);
+  const drawingActive = useStudioStore((state) => state.drawingActive);
   const committedDrawings = useStudioStore((state) => state.committedDrawings);
   const autoRotate = useStudioStore((state) => state.autoRotate);
   const recording = useStudioStore((state) => state.recording);
@@ -215,6 +216,8 @@ function ControlPanel() {
   const setAutoRotate = useStudioStore((state) => state.setAutoRotate);
   const applyMaterialPreset = useStudioStore((state) => state.applyMaterialPreset);
   const convertDrawToMesh = useStudioStore((state) => state.convertDrawToMesh);
+  const finishDrawing = useStudioStore((state) => state.finishDrawing);
+  const resumeDrawing = useStudioStore((state) => state.resumeDrawing);
   const clearDrawing = useStudioStore((state) => state.clearDrawing);
   const editDrawing = useStudioStore((state) => state.editDrawing);
   const exportPng = useStudioStore((state) => state.exportPng);
@@ -302,9 +305,21 @@ function ControlPanel() {
         <section className="panel-section">
           <h2>Outline</h2>
           <div className="action-grid">
-            <button className="primary-action" disabled={!hasDrawing} onClick={convertDrawToMesh}>
+            <button
+              className="primary-action"
+              disabled={!drawingActive || !hasDrawing}
+              onClick={convertDrawToMesh}
+            >
               <Droplets size={16} aria-hidden="true" />
               Add
+            </button>
+            <button
+              className={!drawingActive ? 'primary-action' : ''}
+              disabled={drawingActive && !hasMesh && !hasDrawing}
+              onClick={drawingActive ? finishDrawing : resumeDrawing}
+            >
+              <Rotate3D size={16} aria-hidden="true" />
+              {drawingActive ? 'Finish' : 'Draw more'}
             </button>
             <button onClick={hasMesh ? editDrawing : clearDrawing}>
               <PenLine size={16} aria-hidden="true" />
@@ -315,12 +330,14 @@ function ControlPanel() {
               Clear
             </button>
           </div>
+          <p className="draw-state">{drawingActive ? 'Sketching' : 'Orbit view'}</p>
           <div className="plane-switch" aria-label="Drawing plane">
             {drawingPlanes.map((plane) => (
               <button
                 key={plane.id}
                 className={drawRefine.plane === plane.id ? 'active' : ''}
                 onClick={() => setDrawPlane(plane.id)}
+                disabled={!drawingActive}
               >
                 {plane.label}
               </button>

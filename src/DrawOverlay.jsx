@@ -26,6 +26,7 @@ export function DrawOverlay() {
   const [drawing, setDrawing] = useState(false);
   const [size, setSize] = useState({ width: 1, height: 1 });
   const mode = useStudioStore((state) => state.mode);
+  const drawingActive = useStudioStore((state) => state.drawingActive);
   const drawPoints = useStudioStore((state) => state.drawPoints);
   const drawRefine = useStudioStore((state) => state.drawRefine);
   const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
@@ -36,7 +37,7 @@ export function DrawOverlay() {
     [drawPoints, drawRefine],
   );
 
-  const visible = mode === 'draw';
+  const visible = mode === 'draw' && drawingActive;
 
   const updateSize = () => {
     const bounds = ref.current?.getBoundingClientRect();

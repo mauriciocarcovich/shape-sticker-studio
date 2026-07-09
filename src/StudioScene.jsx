@@ -210,12 +210,7 @@ function PresetGeometry({ shape }) {
   return <primitive object={geometry} attach="geometry" />;
 }
 
-function applyDrawingPlane(geometry, plane) {
-  if (plane === 'xz') geometry.rotateX(Math.PI / 2);
-  if (plane === 'yz') geometry.rotateY(Math.PI / 2);
-}
-
-function OutlineGeometry({ points, depth, bevelSize, depthProfile, inflate, plane }) {
+function OutlineGeometry({ points, depth, bevelSize, depthProfile, inflate }) {
   const geometry = useMemo(() => {
     if (points.length < 4) return new THREE.BoxGeometry(0.01, 0.01, 0.01);
     const shape = new THREE.Shape();
@@ -234,9 +229,8 @@ function OutlineGeometry({ points, depth, bevelSize, depthProfile, inflate, plan
     });
     geo.center();
     applyDepthProfile(geo, depthProfile, inflate);
-    applyDrawingPlane(geo, plane);
     return geo;
-  }, [points, depth, bevelSize, depthProfile, inflate, plane]);
+  }, [points, depth, bevelSize, depthProfile, inflate]);
 
   useEffect(() => () => geometry.dispose(), [geometry]);
   return <primitive object={geometry} attach="geometry" />;
@@ -307,11 +301,10 @@ function PhoneFaceDetails() {
   const mode = useStudioStore((state) => state.mode);
   const drawRefine = useStudioStore((state) => state.drawRefine);
   const outlinePoints = useStudioStore((state) => state.outlinePoints);
-  const outlinePlane = useStudioStore((state) => state.outlinePlane);
   const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
   const bounds = useMemo(() => drawingBounds(outlinePoints), [outlinePoints]);
 
-  if (mode !== 'draw' || drawRefine.assist !== 'phone' || outlinePlane !== 'xy' || !bounds) return null;
+  if (mode !== 'draw' || drawRefine.assist !== 'phone' || !bounds) return null;
 
   const width = Math.max(bounds.width * 0.72, 0.2);
   const height = Math.max(bounds.height * 0.76, 0.2);
@@ -352,7 +345,7 @@ function StickerMaterial({ material, texture }) {
 }
 
 function DrawingModel({ material, texture }) {
-  const committedDrawings = useStudioStore((state) => state.committedDrawings);
+  const outlinePoints = useStudioStore((state) => state.outlinePoints);
   const drawPoints = useStudioStore((state) => state.drawPoints);
   const drawRefine = useStudioStore((state) => state.drawRefine);
   const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
@@ -366,19 +359,18 @@ function DrawingModel({ material, texture }) {
 
   return (
     <>
-      {committedDrawings.map((drawing) => (
-        <mesh key={drawing.id} castShadow receiveShadow>
+      {outlinePoints.length >= 4 ? (
+        <mesh castShadow receiveShadow>
           <OutlineGeometry
-            points={drawing.points}
+            points={outlinePoints}
             depth={extrusionDepth}
             bevelSize={bevelSize}
             depthProfile={depthProfile}
             inflate={inflate}
-            plane={drawing.plane}
           />
           <StickerMaterial material={material} texture={texture} />
         </mesh>
-      ))}
+      ) : null}
       {previewPoints.length >= 4 ? (
         <mesh castShadow receiveShadow>
           <OutlineGeometry
@@ -387,7 +379,6 @@ function DrawingModel({ material, texture }) {
             bevelSize={bevelSize}
             depthProfile={depthProfile}
             inflate={inflate}
-            plane={drawRefine.plane}
           />
           <StickerMaterial material={material} texture={texture} />
         </mesh>

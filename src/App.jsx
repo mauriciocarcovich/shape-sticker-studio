@@ -49,12 +49,6 @@ const depthProfiles = [
   { id: 'ridge', label: 'Ribbed depth' },
 ];
 
-const drawingPlanes = [
-  { id: 'xy', label: 'XY' },
-  { id: 'xz', label: 'XZ' },
-  { id: 'yz', label: 'YZ' },
-];
-
 const materialOptions = Object.entries(materialPresets).map(([id, preset]) => ({
   id,
   label: preset.label,
@@ -200,7 +194,7 @@ function ControlPanel() {
   const drawRefine = useStudioStore((state) => state.drawRefine);
   const drawPoints = useStudioStore((state) => state.drawPoints);
   const drawingActive = useStudioStore((state) => state.drawingActive);
-  const committedDrawings = useStudioStore((state) => state.committedDrawings);
+  const outlinePoints = useStudioStore((state) => state.outlinePoints);
   const autoRotate = useStudioStore((state) => state.autoRotate);
   const recording = useStudioStore((state) => state.recording);
   const videoStatus = useStudioStore((state) => state.videoStatus);
@@ -212,7 +206,6 @@ function ControlPanel() {
   const setExtrusionDepth = useStudioStore((state) => state.setExtrusionDepth);
   const setBevelSize = useStudioStore((state) => state.setBevelSize);
   const setDrawRefine = useStudioStore((state) => state.setDrawRefine);
-  const setDrawPlane = useStudioStore((state) => state.setDrawPlane);
   const setAutoRotate = useStudioStore((state) => state.setAutoRotate);
   const applyMaterialPreset = useStudioStore((state) => state.applyMaterialPreset);
   const convertDrawToMesh = useStudioStore((state) => state.convertDrawToMesh);
@@ -225,7 +218,7 @@ function ControlPanel() {
   const exportTransparentWebm = useStudioStore((state) => state.exportTransparentWebm);
 
   const hasDrawing = drawPoints.length >= 4;
-  const hasMesh = committedDrawings.length > 0;
+  const hasMesh = outlinePoints.length >= 4;
 
   return (
     <aside className="control-panel" aria-label="Shape controls">
@@ -311,7 +304,7 @@ function ControlPanel() {
               onClick={convertDrawToMesh}
             >
               <Droplets size={16} aria-hidden="true" />
-              Add
+              {hasMesh ? 'Update' : 'Build'}
             </button>
             <button
               className={!drawingActive ? 'primary-action' : ''}
@@ -323,7 +316,7 @@ function ControlPanel() {
             </button>
             <button onClick={hasMesh ? editDrawing : clearDrawing}>
               <PenLine size={16} aria-hidden="true" />
-              {hasMesh ? 'Undo' : 'Reset'}
+              {hasMesh ? 'Redraw' : 'Reset'}
             </button>
             <button onClick={clearDrawing}>
               <Trash2 size={16} aria-hidden="true" />
@@ -331,18 +324,6 @@ function ControlPanel() {
             </button>
           </div>
           <p className="draw-state">{drawingActive ? 'Sketching' : 'Orbit view'}</p>
-          <div className="plane-switch" aria-label="Drawing plane">
-            {drawingPlanes.map((plane) => (
-              <button
-                key={plane.id}
-                className={drawRefine.plane === plane.id ? 'active' : ''}
-                onClick={() => setDrawPlane(plane.id)}
-                disabled={!drawingActive}
-              >
-                {plane.label}
-              </button>
-            ))}
-          </div>
           <RangeControl
             label="Depth"
             min={0.12}

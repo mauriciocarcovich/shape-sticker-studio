@@ -184,28 +184,6 @@ h2 {
   letter-spacing: 0;
 }
 
-.plane-switch {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.plane-switch button {
-  min-height: 34px;
-  font-size: 0.86rem;
-}
-
-.plane-switch button.active {
-  border-color: rgba(32, 191, 143, 0.55);
-  background: #dff7ee;
-  color: #0c654a;
-}
-
-.plane-switch button:disabled {
-  cursor: not-allowed;
-  opacity: 0.56;
-}
-
 .primary-action {
   background: #dff7ee;
   border-color: rgba(32, 191, 143, 0.5);
@@ -557,8 +535,7 @@ select {
   }
 
   .segmented,
-  .action-grid,
-  .plane-switch {
+  .action-grid {
     gap: 6px;
   }
 

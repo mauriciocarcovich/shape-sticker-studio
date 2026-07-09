@@ -122,7 +122,7 @@ export function DrawOverlay() {
           </>
         ) : null}
       </svg>
-      <div className="draw-badge">Outline sketch - {drawRefine.plane.toUpperCase()}</div>
+      <div className="draw-badge">Outline sketch</div>
       {refinedPoints.length > 3 ? (
         <div className="thickness-preview" aria-hidden="true">
           <svg viewBox="0 0 176 130">

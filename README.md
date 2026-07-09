@@ -14,9 +14,7 @@ Shape Sticker Studio is a local-first web app for creating transparent 3D sticke
 - 10-second rotating MPEG-4 video export for mobile-friendly saving
 - Alpha-capable WebM video export for transparent-video workflows
 - Draw mode for sketching a 2D outline and converting it into an extruded 3D mesh
-- Drawing plane controls for XY, XZ, and YZ sketching
-- Additive draw workflow for building up multiple committed sketches across different planes
-- Finish/draw-more workflow for switching from sketch capture to orbiting and exporting the built object
+- Single-outline draw workflow for building, updating, orbiting, and exporting an extruded sketch
 - Drawing refinement modes: freeform, organic smooth, rounded rectangle, symmetric, hard edge, and phone slab
 - Depth profile controls for drawn meshes: flat slab, puffy sticker, soft dome, and ribbed depth
 - Material presets with procedural texture styles including clay, foam, wood, rubber, chrome, glass, and holographic

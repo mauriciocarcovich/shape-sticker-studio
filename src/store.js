@@ -13,14 +13,10 @@ export const transparentLandscapeExport = {
   transparent: true,
 };
 
-function buildCommittedDrawing(drawPoints, drawRefine, index) {
+function buildOutline(drawPoints, drawRefine) {
   const points = refineDrawing(drawPoints, drawRefine);
   if (points.length < 4) return null;
-  return {
-    id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${index}`,
-    points,
-    plane: drawRefine.plane,
-  };
+  return points;
 }
 
 export const materialPresets = {
@@ -244,7 +240,6 @@ export const useStudioStore = create((set, get) => ({
   bevelSize: 0.08,
   drawRefine: {
     assist: 'freeform',
-    plane: 'xy',
     depthProfile: 'flat',
     inflate: 0.28,
     smoothness: 0.42,
@@ -257,14 +252,11 @@ export const useStudioStore = create((set, get) => ({
   drawPoints: [],
   drawingActive: true,
   outlinePoints: [],
-  outlinePlane: 'xy',
-  committedDrawings: [],
   rendererContext: null,
   setMode: (mode) =>
     set((state) => ({
       mode,
-      drawingActive:
-        mode === 'draw' && state.committedDrawings.length === 0 ? true : state.drawingActive,
+      drawingActive: mode === 'draw' && state.outlinePoints.length === 0 ? true : state.drawingActive,
     })),
   setShape: (shape) => set({ shape, mode: 'preset' }),
   applyMaterialPreset: (presetId) =>
@@ -284,8 +276,6 @@ export const useStudioStore = create((set, get) => ({
   setBevelSize: (bevelSize) => set({ bevelSize }),
   setDrawRefine: (key, value) =>
     set((state) => ({ drawRefine: { ...state.drawRefine, [key]: value } })),
-  setDrawPlane: (plane) =>
-    set((state) => ({ drawRefine: { ...state.drawRefine, plane } })),
   setAutoRotate: (autoRotate) => set({ autoRotate }),
   setDrawPoints: (drawPoints) => set({ drawPoints }),
   appendDrawPoint: (point) =>
@@ -300,32 +290,28 @@ export const useStudioStore = create((set, get) => ({
     }),
   convertDrawToMesh: () => {
     const { drawPoints, drawRefine } = get();
-    const drawing = buildCommittedDrawing(drawPoints, drawRefine, get().committedDrawings.length);
-    if (!drawing) return;
-    set((state) => ({
-      committedDrawings: [...state.committedDrawings, drawing],
-      outlinePoints: drawing.points,
-      outlinePlane: drawing.plane,
+    const outlinePoints = buildOutline(drawPoints, drawRefine);
+    if (!outlinePoints) return;
+    set({
+      outlinePoints,
       drawPoints: [],
       mode: 'draw',
       drawingActive: true,
-    }));
+    });
   },
   finishDrawing: () => {
-    const { drawPoints, drawRefine, committedDrawings } = get();
-    const drawing = buildCommittedDrawing(drawPoints, drawRefine, committedDrawings.length);
-    if (!drawing) {
+    const { drawPoints, drawRefine } = get();
+    const outlinePoints = buildOutline(drawPoints, drawRefine);
+    if (!outlinePoints) {
       set({ drawPoints: [], mode: 'draw', drawingActive: false });
       return;
     }
-    set((state) => ({
-      committedDrawings: [...state.committedDrawings, drawing],
-      outlinePoints: drawing.points,
-      outlinePlane: drawing.plane,
+    set({
+      outlinePoints,
       drawPoints: [],
       mode: 'draw',
       drawingActive: false,
-    }));
+    });
   },
   resumeDrawing: () => set({ mode: 'draw', drawingActive: true }),
   clearDrawing: () =>
@@ -333,20 +319,8 @@ export const useStudioStore = create((set, get) => ({
       drawPoints: [],
       drawingActive: true,
       outlinePoints: [],
-      outlinePlane: 'xy',
-      committedDrawings: [],
     }),
-  editDrawing: () =>
-    set((state) => {
-      const committedDrawings = state.committedDrawings.slice(0, -1);
-      const latest = committedDrawings[committedDrawings.length - 1];
-      return {
-        committedDrawings,
-        outlinePoints: latest?.points ?? [],
-        outlinePlane: latest?.plane ?? 'xy',
-        drawingActive: true,
-      };
-    }),
+  editDrawing: () => set({ drawPoints: [], drawingActive: true }),
   setRendererContext: (rendererContext) => set({ rendererContext }),
   exportPng: () => downloadCanvas(get().rendererContext, transparentLandscapeExport),
   exportVideo: async () => {

@@ -1,6 +1,6 @@
 # Shape Sticker Studio
 
-Shape Sticker Studio is a local-first web app for creating transparent 3D sticker-style shapes. It supports preset shapes, hand-drawn 2D outlines, refined extrusion, material controls, lighting controls, PNG export, WebM video export, and an iPhone-oriented MP4 export path when the browser supports H.264 WebCodecs.
+Shape Sticker Studio is a local-first web app for creating transparent 3D sticker-style shapes. It supports preset shapes, hand-drawn outlines, refined extrusion, material controls, lighting controls, transparent PNG export, and transparent WebM video export.
 
 ## Features
 
@@ -9,10 +9,10 @@ Shape Sticker Studio is a local-first web app for creating transparent 3D sticke
 - Material controls for color, roughness, metalness, transmission, and opacity
 - Lighting and shadow controls
 - Transparent PNG export
-- Export presets for transparent sticker PNG, square posts, story/reel video, and landscape output
-- 10-second rotating WebM video export with preset-based resolution and bitrate
-- iPhone MP4 export when the current browser supports H.264 WebCodecs
+- Standard 1920x1080 transparent landscape export
+- 10-second rotating transparent WebM video export
 - Draw mode for sketching a 2D outline and converting it into an extruded 3D mesh
+- Drawing plane controls for XY, XZ, and YZ sketching
 - Drawing refinement modes: freeform, organic smooth, rounded rectangle, symmetric, hard edge, and phone slab
 - Depth profile controls for drawn meshes: flat slab, puffy sticker, soft dome, and ribbed depth
 - Material presets with procedural texture styles including clay, foam, wood, rubber, chrome, glass, and holographic
@@ -27,7 +27,6 @@ Shape Sticker Studio is a local-first web app for creating transparent 3D sticke
 - Drei
 - Leva
 - Zustand
-- mp4-muxer
 
 ## Getting Started
 
@@ -57,11 +56,11 @@ npm run build
 
 ## Export Notes
 
-The PNG export can render higher-resolution output than the editing preview. Use the export preset menu for transparent sticker, square post, story/reel, or landscape dimensions.
+The PNG export renders a standard transparent 1920x1080 landscape frame.
 
-The WebM export is the most broadly available browser recording path on desktop browsers, but iPhone may not open WebM files. WebM export uses the selected export preset's resolution, frame rate, and bitrate.
+The WebM export records the same transparent 1920x1080 landscape frame. WebM is used because browser MP4 export does not reliably preserve alpha transparency.
 
-The iPhone MP4 export attempts to create an H.264 MP4 through WebCodecs. If the browser does not expose that encoder, the app will show a status message instead of producing an incompatible file. MP4 does not preserve transparency reliably, so the iPhone export uses a solid studio background.
+Some video players display transparent WebM over black because the player background is black. The file is still exported with an alpha-capable WebM path when the browser supports it.
 
 ## Privacy
 

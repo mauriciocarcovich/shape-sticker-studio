@@ -176,6 +176,23 @@ h2 {
   grid-template-columns: 1fr 1fr 1fr;
 }
 
+.plane-switch {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.plane-switch button {
+  min-height: 34px;
+  font-size: 0.86rem;
+}
+
+.plane-switch button.active {
+  border-color: rgba(32, 191, 143, 0.55);
+  background: #dff7ee;
+  color: #0c654a;
+}
+
 .primary-action {
   background: #dff7ee;
   border-color: rgba(32, 191, 143, 0.5);
@@ -279,6 +296,12 @@ select {
 .export-status {
   color: var(--muted);
   font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.export-meta {
+  color: var(--muted);
+  font-size: 0.86rem;
   line-height: 1.35;
 }
 

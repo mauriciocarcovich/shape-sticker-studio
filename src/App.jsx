@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { DrawOverlay } from './DrawOverlay.jsx';
 import { StudioScene } from './StudioScene.jsx';
-import { exportPresets, materialPresets, useStudioStore } from './store.js';
+import { materialPresets, transparentLandscapeExport, useStudioStore } from './store.js';
 
 const shapes = [
   { id: 'sphere', label: 'Sphere', icon: Circle },
@@ -47,6 +47,12 @@ const depthProfiles = [
   { id: 'puffy', label: 'Puffy sticker' },
   { id: 'domed', label: 'Soft dome' },
   { id: 'ridge', label: 'Ribbed depth' },
+];
+
+const drawingPlanes = [
+  { id: 'xy', label: 'XY' },
+  { id: 'xz', label: 'XZ' },
+  { id: 'yz', label: 'YZ' },
 ];
 
 const materialOptions = Object.entries(materialPresets).map(([id, preset]) => ({
@@ -105,13 +111,11 @@ function AdvancedControls() {
   const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
   const bevelSize = useStudioStore((state) => state.bevelSize);
   const drawRefine = useStudioStore((state) => state.drawRefine);
-  const exportPreset = useStudioStore((state) => state.exportPreset);
   const setAutoRotate = useStudioStore((state) => state.setAutoRotate);
   const setBlob = useStudioStore((state) => state.setBlob);
   const setExtrusionDepth = useStudioStore((state) => state.setExtrusionDepth);
   const setBevelSize = useStudioStore((state) => state.setBevelSize);
   const setDrawRefine = useStudioStore((state) => state.setDrawRefine);
-  const setExportPreset = useStudioStore((state) => state.setExportPreset);
 
   useControls(
     'Fine tune',
@@ -178,7 +182,6 @@ function AdvancedControls() {
       bevelSize,
       drawRefine.smoothness,
       drawRefine.inflate,
-      exportPreset,
     ],
   );
 
@@ -195,7 +198,6 @@ function ControlPanel() {
   const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
   const bevelSize = useStudioStore((state) => state.bevelSize);
   const drawRefine = useStudioStore((state) => state.drawRefine);
-  const exportPreset = useStudioStore((state) => state.exportPreset);
   const drawPoints = useStudioStore((state) => state.drawPoints);
   const outlinePoints = useStudioStore((state) => state.outlinePoints);
   const autoRotate = useStudioStore((state) => state.autoRotate);
@@ -209,7 +211,7 @@ function ControlPanel() {
   const setExtrusionDepth = useStudioStore((state) => state.setExtrusionDepth);
   const setBevelSize = useStudioStore((state) => state.setBevelSize);
   const setDrawRefine = useStudioStore((state) => state.setDrawRefine);
-  const setExportPreset = useStudioStore((state) => state.setExportPreset);
+  const setDrawPlane = useStudioStore((state) => state.setDrawPlane);
   const setAutoRotate = useStudioStore((state) => state.setAutoRotate);
   const applyMaterialPreset = useStudioStore((state) => state.applyMaterialPreset);
   const convertDrawToMesh = useStudioStore((state) => state.convertDrawToMesh);
@@ -217,7 +219,6 @@ function ControlPanel() {
   const editDrawing = useStudioStore((state) => state.editDrawing);
   const exportPng = useStudioStore((state) => state.exportPng);
   const exportVideo = useStudioStore((state) => state.exportVideo);
-  const exportAppleVideo = useStudioStore((state) => state.exportAppleVideo);
 
   const hasDrawing = drawPoints.length >= 4;
   const hasMesh = outlinePoints.length >= 4;
@@ -298,6 +299,17 @@ function ControlPanel() {
               <Trash2 size={16} aria-hidden="true" />
               Clear
             </button>
+          </div>
+          <div className="plane-switch" aria-label="Drawing plane">
+            {drawingPlanes.map((plane) => (
+              <button
+                key={plane.id}
+                className={drawRefine.plane === plane.id ? 'active' : ''}
+                onClick={() => setDrawPlane(plane.id)}
+              >
+                {plane.label}
+              </button>
+            ))}
           </div>
           <RangeControl
             label="Depth"
@@ -459,24 +471,17 @@ function ControlPanel() {
       <div className="export-stack">
         <section className="panel-section export-options">
           <h2>Export</h2>
-          <SelectControl
-            label="Preset"
-            value={exportPreset}
-            options={exportPresets}
-            onChange={setExportPreset}
-          />
+          <p className="export-meta">
+            {transparentLandscapeExport.width}x{transparentLandscapeExport.height} transparent
+          </p>
         </section>
         <button className="export-button" onClick={exportPng}>
           <Download size={18} aria-hidden="true" />
-          Export transparent PNG
+          Export PNG
         </button>
         <button className="export-button secondary-export" disabled={recording} onClick={exportVideo}>
           <Video size={18} aria-hidden="true" />
-          {recording ? 'Recording 10s...' : 'Export WebM video'}
-        </button>
-        <button className="export-button apple-export" disabled={recording} onClick={exportAppleVideo}>
-          <Smartphone size={18} aria-hidden="true" />
-          {recording ? 'Recording 10s...' : 'Export iPhone MP4'}
+          {recording ? 'Recording 10s...' : 'Export transparent WebM'}
         </button>
         {videoStatus ? <p className="export-status">{videoStatus}</p> : null}
       </div>

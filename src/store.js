@@ -113,7 +113,20 @@ const downloadBlob = (blob, extension) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 500);
 };
 
-const recordCanvas = (rendererContext, preset, set) =>
+const mediaRecorderCandidates = {
+  mp4: [
+    { mimeType: 'video/mp4;codecs=h264', extension: 'mp4' },
+    { mimeType: 'video/mp4;codecs=avc1', extension: 'mp4' },
+    { mimeType: 'video/mp4', extension: 'mp4' },
+  ],
+  webm: [
+    { mimeType: 'video/webm;codecs=vp9', extension: 'webm' },
+    { mimeType: 'video/webm;codecs=vp8', extension: 'webm' },
+    { mimeType: 'video/webm', extension: 'webm' },
+  ],
+};
+
+const recordCanvas = (rendererContext, preset, set, format = 'mp4') =>
   new Promise((resolve, reject) => {
     const canvas = rendererContext?.gl?.domElement;
     if (!canvas?.captureStream || typeof MediaRecorder === 'undefined') {
@@ -121,14 +134,14 @@ const recordCanvas = (rendererContext, preset, set) =>
       return;
     }
 
-    const candidates = [
-      { mimeType: 'video/webm;codecs=vp9', extension: 'webm' },
-      { mimeType: 'video/webm;codecs=vp8', extension: 'webm' },
-      { mimeType: 'video/webm', extension: 'webm' },
-    ];
+    const candidates = mediaRecorderCandidates[format] ?? mediaRecorderCandidates.mp4;
     const selected =
-      candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate.mimeType)) ??
-      candidates[candidates.length - 1];
+      candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate.mimeType)) ?? null;
+
+    if (!selected) {
+      reject(new Error(`${format.toUpperCase()} recording is not supported by this browser.`));
+      return;
+    }
 
     const oldSize = new THREE.Vector2();
     rendererContext.gl.getSize(oldSize);
@@ -185,7 +198,10 @@ const recordCanvas = (rendererContext, preset, set) =>
 
     set({
       recording: true,
-      videoStatus: 'Recording transparent WebM...',
+      videoStatus:
+        selected.extension === 'mp4'
+          ? 'Recording MPEG-4 from transparent canvas...'
+          : 'Recording transparent WebM...',
     });
     recorder.start();
     window.setTimeout(() => recorder.stop(), preset.duration * 1000);
@@ -302,10 +318,29 @@ export const useStudioStore = create((set, get) => ({
     const { rendererContext, recording } = get();
     if (recording) return;
     try {
-      const format = await recordCanvas(rendererContext, transparentLandscapeExport, set);
+      const format = await recordCanvas(rendererContext, transparentLandscapeExport, set, 'mp4');
       set({
         recording: false,
-        videoStatus: `${format} export ready with transparency.`,
+        videoStatus: `${format} export ready.`,
+      });
+      window.setTimeout(() => {
+        if (!get().recording) set({ videoStatus: '' });
+      }, 3600);
+    } catch (error) {
+      set({
+        recording: false,
+        videoStatus: error.message,
+      });
+    }
+  },
+  exportTransparentWebm: async () => {
+    const { rendererContext, recording } = get();
+    if (recording) return;
+    try {
+      const format = await recordCanvas(rendererContext, transparentLandscapeExport, set, 'webm');
+      set({
+        recording: false,
+        videoStatus: `${format} export ready with alpha-capable transparency.`,
       });
       window.setTimeout(() => {
         if (!get().recording) set({ videoStatus: '' });

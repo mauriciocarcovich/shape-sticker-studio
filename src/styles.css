@@ -281,6 +281,18 @@ select {
   background: #e6f3ed;
 }
 
+.alpha-export {
+  border-color: rgba(78, 111, 190, 0.38);
+  background: #edf2ff;
+  color: #274d9a;
+}
+
+.alpha-export:disabled {
+  border-color: rgba(78, 111, 190, 0.18);
+  color: #6a748c;
+  background: #f0f3fa;
+}
+
 .apple-export {
   border-color: rgba(237, 116, 101, 0.42);
   background: #fff1ed;

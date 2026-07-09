@@ -219,6 +219,7 @@ function ControlPanel() {
   const editDrawing = useStudioStore((state) => state.editDrawing);
   const exportPng = useStudioStore((state) => state.exportPng);
   const exportVideo = useStudioStore((state) => state.exportVideo);
+  const exportTransparentWebm = useStudioStore((state) => state.exportTransparentWebm);
 
   const hasDrawing = drawPoints.length >= 4;
   const hasMesh = committedDrawings.length > 0;
@@ -495,7 +496,11 @@ function ControlPanel() {
         </button>
         <button className="export-button secondary-export" disabled={recording} onClick={exportVideo}>
           <Video size={18} aria-hidden="true" />
-          {recording ? 'Recording 10s...' : 'Export transparent WebM'}
+          {recording ? 'Recording 10s...' : 'Export MPEG-4'}
+        </button>
+        <button className="export-button alpha-export" disabled={recording} onClick={exportTransparentWebm}>
+          <Video size={18} aria-hidden="true" />
+          {recording ? 'Recording 10s...' : 'Export alpha WebM'}
         </button>
         {videoStatus ? <p className="export-status">{videoStatus}</p> : null}
       </div>

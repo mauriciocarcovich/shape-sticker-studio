@@ -1,6 +1,6 @@
 # Shape Sticker Studio
 
-Shape Sticker Studio is a local-first web app for creating transparent 3D sticker-style shapes. It supports preset shapes, hand-drawn outlines, refined extrusion, material controls, lighting controls, transparent PNG export, and transparent WebM video export.
+Shape Sticker Studio is a local-first web app for creating transparent 3D sticker-style shapes. It supports preset shapes, hand-drawn outlines, refined extrusion, material controls, lighting controls, transparent PNG export, MPEG-4 video export, and alpha-capable WebM video export.
 
 ## Features
 
@@ -11,7 +11,8 @@ Shape Sticker Studio is a local-first web app for creating transparent 3D sticke
 - Lighting and shadow controls
 - Transparent PNG export
 - Standard 1920x1080 transparent landscape export
-- 10-second rotating transparent WebM video export
+- 10-second rotating MPEG-4 video export for mobile-friendly saving
+- Alpha-capable WebM video export for transparent-video workflows
 - Draw mode for sketching a 2D outline and converting it into an extruded 3D mesh
 - Drawing plane controls for XY, XZ, and YZ sketching
 - Additive draw workflow for building up multiple committed sketches across different planes
@@ -61,9 +62,9 @@ npm run build
 
 The PNG export renders a standard transparent 1920x1080 landscape frame.
 
-The WebM export records the same transparent 1920x1080 landscape frame. WebM is used because browser MP4 export does not reliably preserve alpha transparency.
+The MPEG-4 export records the transparent 1920x1080 canvas using the browser's native video encoder. It is the most mobile-friendly save path, especially on iPhone Safari.
 
-Some video players display transparent WebM over black because the player background is black. The file is still exported with an alpha-capable WebM path when the browser supports it.
+The alpha WebM export records the same transparent 1920x1080 canvas through an alpha-capable path. Some video players display transparent video over black because the player background is black.
 
 ## Privacy
 

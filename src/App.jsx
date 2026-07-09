@@ -130,7 +130,7 @@ function AdvancedControls() {
         min: 0,
         max: 0.55,
         step: 0.01,
-        label: 'Blob noise',
+        label: 'Surface noise',
         onChange: (value) => setBlob('intensity', value),
       },
       blobFrequency: {
@@ -138,7 +138,7 @@ function AdvancedControls() {
         min: 0.8,
         max: 6,
         step: 0.1,
-        label: 'Blob freq',
+        label: 'Noise freq',
         onChange: (value) => setBlob('frequency', value),
       },
       extrusionDepth: {
@@ -199,7 +199,7 @@ function ControlPanel() {
   const bevelSize = useStudioStore((state) => state.bevelSize);
   const drawRefine = useStudioStore((state) => state.drawRefine);
   const drawPoints = useStudioStore((state) => state.drawPoints);
-  const outlinePoints = useStudioStore((state) => state.outlinePoints);
+  const committedDrawings = useStudioStore((state) => state.committedDrawings);
   const autoRotate = useStudioStore((state) => state.autoRotate);
   const recording = useStudioStore((state) => state.recording);
   const videoStatus = useStudioStore((state) => state.videoStatus);
@@ -221,7 +221,7 @@ function ControlPanel() {
   const exportVideo = useStudioStore((state) => state.exportVideo);
 
   const hasDrawing = drawPoints.length >= 4;
-  const hasMesh = outlinePoints.length >= 4;
+  const hasMesh = committedDrawings.length > 0;
 
   return (
     <aside className="control-panel" aria-label="Shape controls">
@@ -262,26 +262,40 @@ function ControlPanel() {
               </button>
             ))}
           </div>
-          {shape === 'blob' ? (
-            <div className="sub-controls">
-              <RangeControl
-                label="Noise"
-                min={0}
-                max={0.55}
-                step={0.01}
-                value={blob.intensity}
-                onChange={(value) => setBlob('intensity', value)}
-              />
-              <RangeControl
-                label="Frequency"
-                min={0.8}
-                max={6}
-                step={0.1}
-                value={blob.frequency}
-                onChange={(value) => setBlob('frequency', value)}
-              />
-            </div>
-          ) : null}
+          <div className="sub-controls">
+            <RangeControl
+              label="Depth"
+              min={0.12}
+              max={1.5}
+              step={0.01}
+              value={extrusionDepth}
+              onChange={setExtrusionDepth}
+            />
+            <RangeControl
+              label="Bevel"
+              min={0}
+              max={0.22}
+              step={0.01}
+              value={bevelSize}
+              onChange={setBevelSize}
+            />
+            <RangeControl
+              label="Noise"
+              min={0}
+              max={0.55}
+              step={0.01}
+              value={blob.intensity}
+              onChange={(value) => setBlob('intensity', value)}
+            />
+            <RangeControl
+              label="Frequency"
+              min={0.8}
+              max={6}
+              step={0.1}
+              value={blob.frequency}
+              onChange={(value) => setBlob('frequency', value)}
+            />
+          </div>
         </section>
       ) : (
         <section className="panel-section">
@@ -289,11 +303,11 @@ function ControlPanel() {
           <div className="action-grid">
             <button className="primary-action" disabled={!hasDrawing} onClick={convertDrawToMesh}>
               <Droplets size={16} aria-hidden="true" />
-              Convert
+              Add
             </button>
             <button onClick={hasMesh ? editDrawing : clearDrawing}>
               <PenLine size={16} aria-hidden="true" />
-              {hasMesh ? 'Edit' : 'Reset'}
+              {hasMesh ? 'Undo' : 'Reset'}
             </button>
             <button onClick={clearDrawing}>
               <Trash2 size={16} aria-hidden="true" />

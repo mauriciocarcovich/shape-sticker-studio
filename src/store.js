@@ -231,6 +231,7 @@ export const useStudioStore = create((set, get) => ({
   drawPoints: [],
   outlinePoints: [],
   outlinePlane: 'xy',
+  committedDrawings: [],
   rendererContext: null,
   setMode: (mode) => set({ mode }),
   setShape: (shape) => set({ shape, mode: 'preset' }),
@@ -268,10 +269,33 @@ export const useStudioStore = create((set, get) => ({
     const { drawPoints, drawRefine } = get();
     const points = refineDrawing(drawPoints, drawRefine);
     if (points.length < 4) return;
-    set({ outlinePoints: points, outlinePlane: drawRefine.plane, mode: 'draw' });
+    set((state) => ({
+      committedDrawings: [
+        ...state.committedDrawings,
+        {
+          id: crypto.randomUUID?.() ?? `${Date.now()}-${state.committedDrawings.length}`,
+          points,
+          plane: drawRefine.plane,
+        },
+      ],
+      outlinePoints: points,
+      outlinePlane: drawRefine.plane,
+      drawPoints: [],
+      mode: 'draw',
+    }));
   },
-  clearDrawing: () => set({ drawPoints: [], outlinePoints: [], outlinePlane: 'xy' }),
-  editDrawing: () => set({ outlinePoints: [] }),
+  clearDrawing: () =>
+    set({ drawPoints: [], outlinePoints: [], outlinePlane: 'xy', committedDrawings: [] }),
+  editDrawing: () =>
+    set((state) => {
+      const committedDrawings = state.committedDrawings.slice(0, -1);
+      const latest = committedDrawings[committedDrawings.length - 1];
+      return {
+        committedDrawings,
+        outlinePoints: latest?.points ?? [],
+        outlinePlane: latest?.plane ?? 'xy',
+      };
+    }),
   setRendererContext: (rendererContext) => set({ rendererContext }),
   exportPng: () => downloadCanvas(get().rendererContext, transparentLandscapeExport),
   exportVideo: async () => {

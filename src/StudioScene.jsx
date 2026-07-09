@@ -12,7 +12,38 @@ function pseudoNoise(x, y, z) {
   return (a + b + c) / 3;
 }
 
+function applySurfaceNoise(geometry, intensity, frequency) {
+  if (intensity <= 0) {
+    geometry.computeVertexNormals();
+    return geometry;
+  }
+
+  const position = geometry.attributes.position;
+  const normal = geometry.attributes.normal;
+  const vertex = new THREE.Vector3();
+  const normalVector = new THREE.Vector3();
+
+  geometry.computeVertexNormals();
+
+  for (let index = 0; index < position.count; index += 1) {
+    vertex.fromBufferAttribute(position, index);
+    if (normal) normalVector.fromBufferAttribute(normal, index);
+    else normalVector.copy(vertex).normalize();
+    const noise = pseudoNoise(vertex.x * frequency, vertex.y * frequency, vertex.z * frequency);
+    const ripple = Math.sin((vertex.x - vertex.y + vertex.z) * frequency * 1.7) * 0.24;
+    vertex.addScaledVector(normalVector.normalize(), intensity * 0.22 * (noise + ripple));
+    position.setXYZ(index, vertex.x, vertex.y, vertex.z);
+  }
+
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 function StarGeometry() {
+  const blob = useStudioStore((state) => state.blob);
+  const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
+  const bevelSize = useStudioStore((state) => state.bevelSize);
   const geometry = useMemo(() => {
     const shape = new THREE.Shape();
     const points = 10;
@@ -25,22 +56,25 @@ function StarGeometry() {
       else shape.lineTo(x, y);
     }
     const geo = new THREE.ExtrudeGeometry(shape, {
-      depth: 0.42,
+      depth: extrusionDepth,
       bevelEnabled: true,
       bevelSegments: 6,
-      bevelSize: 0.055,
-      bevelThickness: 0.08,
+      bevelSize: Math.min(bevelSize, extrusionDepth * 0.2),
+      bevelThickness: Math.min(bevelSize * 1.2, extrusionDepth * 0.24),
       curveSegments: 16,
     });
     geo.center();
-    return geo;
-  }, []);
+    return applySurfaceNoise(geo, blob.intensity, blob.frequency);
+  }, [bevelSize, blob.frequency, blob.intensity, extrusionDepth]);
 
   useEffect(() => () => geometry.dispose(), [geometry]);
   return <primitive object={geometry} attach="geometry" />;
 }
 
 function HeartGeometry() {
+  const blob = useStudioStore((state) => state.blob);
+  const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
+  const bevelSize = useStudioStore((state) => state.bevelSize);
   const geometry = useMemo(() => {
     const shape = new THREE.Shape();
     shape.moveTo(0, -0.82);
@@ -49,16 +83,16 @@ function HeartGeometry() {
     shape.bezierCurveTo(0, 0.48, 0.2, 0.8, 0.55, 0.72);
     shape.bezierCurveTo(1.18, 0.58, 1.15, -0.2, 0, -0.82);
     const geo = new THREE.ExtrudeGeometry(shape, {
-      depth: 0.48,
+      depth: extrusionDepth,
       bevelEnabled: true,
       bevelSegments: 10,
-      bevelSize: 0.06,
-      bevelThickness: 0.08,
+      bevelSize: Math.min(bevelSize, extrusionDepth * 0.2),
+      bevelThickness: Math.min(bevelSize * 1.2, extrusionDepth * 0.24),
       curveSegments: 32,
     });
     geo.center();
-    return geo;
-  }, []);
+    return applySurfaceNoise(geo, blob.intensity, blob.frequency);
+  }, [bevelSize, blob.frequency, blob.intensity, extrusionDepth]);
 
   useEffect(() => () => geometry.dispose(), [geometry]);
   return <primitive object={geometry} attach="geometry" />;
@@ -127,6 +161,55 @@ function BlobGeometry({ intensity, frequency }) {
   return <primitive object={geometry} attach="geometry" />;
 }
 
+function PresetGeometry({ shape }) {
+  const blob = useStudioStore((state) => state.blob);
+  const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
+  const bevelSize = useStudioStore((state) => state.bevelSize);
+
+  const geometry = useMemo(() => {
+    const depthScale = Math.max(0.2, extrusionDepth);
+    let geo;
+
+    if (shape === 'cube') {
+      const boxShape = new THREE.Shape();
+      const size = 0.92;
+      const radius = Math.min(bevelSize * 1.8, 0.28);
+      boxShape.moveTo(-size + radius, -size);
+      boxShape.lineTo(size - radius, -size);
+      boxShape.quadraticCurveTo(size, -size, size, -size + radius);
+      boxShape.lineTo(size, size - radius);
+      boxShape.quadraticCurveTo(size, size, size - radius, size);
+      boxShape.lineTo(-size + radius, size);
+      boxShape.quadraticCurveTo(-size, size, -size, size - radius);
+      boxShape.lineTo(-size, -size + radius);
+      boxShape.quadraticCurveTo(-size, -size, -size + radius, -size);
+      geo = new THREE.ExtrudeGeometry(boxShape, {
+        depth: depthScale,
+        bevelEnabled: true,
+        bevelSegments: 8,
+        bevelSize: Math.min(bevelSize, depthScale * 0.18),
+        bevelThickness: Math.min(bevelSize * 1.1, depthScale * 0.22),
+        curveSegments: 18,
+      });
+      geo.center();
+    }
+
+    if (shape === 'capsule') geo = new THREE.CapsuleGeometry(0.64, 0.65 + depthScale * 0.45, 32, 64);
+    if (shape === 'torus') geo = new THREE.TorusGeometry(0.7 + depthScale * 0.05, 0.18 + depthScale * 0.12, 48, 128);
+    if (shape === 'cylinder') geo = new THREE.CylinderGeometry(0.9, 0.9, 0.7 + depthScale, 96, 12);
+    if (shape === 'cone') geo = new THREE.ConeGeometry(1, 0.8 + depthScale, 96, 12);
+    if (shape === 'gem') geo = new THREE.CylinderGeometry(0.32 + bevelSize, 1.05, 0.8 + depthScale, 6, 8);
+    if (shape === 'coin') geo = new THREE.CylinderGeometry(1.1, 1.1, 0.12 + depthScale * 0.45, 96, 8);
+    if (!geo) geo = new THREE.SphereGeometry(1.12, 96, 64);
+
+    geo.center();
+    return applySurfaceNoise(geo, blob.intensity, blob.frequency);
+  }, [bevelSize, blob.frequency, blob.intensity, extrusionDepth, shape]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return <primitive object={geometry} attach="geometry" />;
+}
+
 function applyDrawingPlane(geometry, plane) {
   if (plane === 'xz') geometry.rotateX(Math.PI / 2);
   if (plane === 'yz') geometry.rotateY(Math.PI / 2);
@@ -160,57 +243,15 @@ function OutlineGeometry({ points, depth, bevelSize, depthProfile, inflate, plan
 }
 
 function ShapeGeometry() {
-  const mode = useStudioStore((state) => state.mode);
   const shape = useStudioStore((state) => state.shape);
   const blob = useStudioStore((state) => state.blob);
-  const drawPoints = useStudioStore((state) => state.drawPoints);
-  const drawRefine = useStudioStore((state) => state.drawRefine);
-  const outlinePoints = useStudioStore((state) => state.outlinePoints);
-  const outlinePlane = useStudioStore((state) => state.outlinePlane);
-  const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
-  const bevelSize = useStudioStore((state) => state.bevelSize);
-  const depthProfile = useStudioStore((state) => state.drawRefine.depthProfile);
-  const inflate = useStudioStore((state) => state.drawRefine.inflate);
 
-  if (mode === 'draw' && outlinePoints.length >= 4) {
-    return (
-      <OutlineGeometry
-        points={outlinePoints}
-        depth={extrusionDepth}
-        bevelSize={bevelSize}
-        depthProfile={depthProfile}
-        inflate={inflate}
-        plane={outlinePlane}
-      />
-    );
-  }
-
-  if (mode === 'draw' && drawPoints.length >= 4) {
-    return (
-      <OutlineGeometry
-        points={refineDrawing(drawPoints, drawRefine)}
-        depth={extrusionDepth}
-        bevelSize={bevelSize}
-        depthProfile={depthProfile}
-        inflate={inflate}
-        plane={drawRefine.plane}
-      />
-    );
-  }
-
-  if (shape === 'cube') return <boxGeometry args={[1.75, 1.75, 1.75]} />;
   if (shape === 'star') return <StarGeometry />;
   if (shape === 'heart') return <HeartGeometry />;
-  if (shape === 'capsule') return <capsuleGeometry args={[0.64, 1.05, 32, 64]} />;
-  if (shape === 'torus') return <torusGeometry args={[0.78, 0.28, 48, 128]} />;
-  if (shape === 'cylinder') return <cylinderGeometry args={[0.9, 0.9, 1.45, 96]} />;
-  if (shape === 'cone') return <coneGeometry args={[1, 1.65, 96]} />;
-  if (shape === 'gem') return <cylinderGeometry args={[0.42, 1.05, 1.55, 6]} />;
-  if (shape === 'coin') return <cylinderGeometry args={[1.1, 1.1, 0.34, 96]} />;
   if (shape === 'blob') {
     return <BlobGeometry intensity={blob.intensity} frequency={blob.frequency} />;
   }
-  return <sphereGeometry args={[1.12, 96, 64]} />;
+  return <PresetGeometry shape={shape} />;
 }
 
 function createTexture(style) {
@@ -289,7 +330,75 @@ function PhoneFaceDetails() {
   );
 }
 
+function StickerMaterial({ material, texture }) {
+  return (
+    <meshPhysicalMaterial
+      color={material.color}
+      map={texture}
+      bumpMap={texture}
+      bumpScale={material.textureStyle === 'none' ? 0 : 0.045}
+      roughness={material.roughness}
+      metalness={material.metalness}
+      transmission={material.transmission}
+      opacity={material.opacity}
+      transparent={material.opacity < 1 || material.transmission > 0}
+      thickness={0.85}
+      ior={1.45}
+      clearcoat={0.24}
+      clearcoatRoughness={0.18}
+      side={THREE.DoubleSide}
+    />
+  );
+}
+
+function DrawingModel({ material, texture }) {
+  const committedDrawings = useStudioStore((state) => state.committedDrawings);
+  const drawPoints = useStudioStore((state) => state.drawPoints);
+  const drawRefine = useStudioStore((state) => state.drawRefine);
+  const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
+  const bevelSize = useStudioStore((state) => state.bevelSize);
+  const depthProfile = useStudioStore((state) => state.drawRefine.depthProfile);
+  const inflate = useStudioStore((state) => state.drawRefine.inflate);
+  const previewPoints = useMemo(
+    () => (drawPoints.length >= 4 ? refineDrawing(drawPoints, drawRefine) : []),
+    [drawPoints, drawRefine],
+  );
+
+  return (
+    <>
+      {committedDrawings.map((drawing) => (
+        <mesh key={drawing.id} castShadow receiveShadow>
+          <OutlineGeometry
+            points={drawing.points}
+            depth={extrusionDepth}
+            bevelSize={bevelSize}
+            depthProfile={depthProfile}
+            inflate={inflate}
+            plane={drawing.plane}
+          />
+          <StickerMaterial material={material} texture={texture} />
+        </mesh>
+      ))}
+      {previewPoints.length >= 4 ? (
+        <mesh castShadow receiveShadow>
+          <OutlineGeometry
+            points={previewPoints}
+            depth={extrusionDepth}
+            bevelSize={bevelSize}
+            depthProfile={depthProfile}
+            inflate={inflate}
+            plane={drawRefine.plane}
+          />
+          <StickerMaterial material={material} texture={texture} />
+        </mesh>
+      ) : null}
+      <PhoneFaceDetails />
+    </>
+  );
+}
+
 function StickerMesh() {
+  const mode = useStudioStore((state) => state.mode);
   const material = useStudioStore((state) => state.material);
   const autoRotate = useStudioStore((state) => state.autoRotate);
   const recording = useStudioStore((state) => state.recording);
@@ -313,26 +422,18 @@ function StickerMesh() {
     meshRef.current.rotation.x += 0.1 * delta;
   });
 
+  if (mode === 'draw') {
+    return (
+      <group ref={meshRef} rotation={[0.12, -0.36, 0]} scale={1.18}>
+        <DrawingModel material={material} texture={texture} />
+      </group>
+    );
+  }
+
   return (
     <mesh ref={meshRef} castShadow receiveShadow rotation={[0.12, -0.36, 0]} scale={1.18}>
       <ShapeGeometry />
-      <meshPhysicalMaterial
-        color={material.color}
-        map={texture}
-        bumpMap={texture}
-        bumpScale={material.textureStyle === 'none' ? 0 : 0.045}
-        roughness={material.roughness}
-        metalness={material.metalness}
-        transmission={material.transmission}
-        opacity={material.opacity}
-        transparent={material.opacity < 1 || material.transmission > 0}
-        thickness={0.85}
-        ior={1.45}
-        clearcoat={0.24}
-        clearcoatRoughness={0.18}
-        side={THREE.DoubleSide}
-      />
-      <PhoneFaceDetails />
+      <StickerMaterial material={material} texture={texture} />
     </mesh>
   );
 }

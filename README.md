@@ -5,6 +5,7 @@ Shape Sticker Studio is a local-first web app for creating transparent 3D sticke
 ## Features
 
 - Preset 3D shapes: sphere, cube, star, blob, capsule, torus, cylinder, cone, gem, heart, and coin
+- Global shape tuning for depth, bevel, surface noise, and noise frequency
 - Mouse orbit controls for rotating and inspecting the object
 - Material controls for color, roughness, metalness, transmission, and opacity
 - Lighting and shadow controls
@@ -13,9 +14,11 @@ Shape Sticker Studio is a local-first web app for creating transparent 3D sticke
 - 10-second rotating transparent WebM video export
 - Draw mode for sketching a 2D outline and converting it into an extruded 3D mesh
 - Drawing plane controls for XY, XZ, and YZ sketching
+- Additive draw workflow for building up multiple committed sketches across different planes
 - Drawing refinement modes: freeform, organic smooth, rounded rectangle, symmetric, hard edge, and phone slab
 - Depth profile controls for drawn meshes: flat slab, puffy sticker, soft dome, and ribbed depth
 - Material presets with procedural texture styles including clay, foam, wood, rubber, chrome, glass, and holographic
+- Mobile-friendly layout with a sticky canvas preview above compact controls
 - Local-first: no backend service required
 
 ## Tech Stack

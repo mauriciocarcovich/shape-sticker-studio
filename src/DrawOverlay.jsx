@@ -28,7 +28,6 @@ export function DrawOverlay() {
   const mode = useStudioStore((state) => state.mode);
   const drawPoints = useStudioStore((state) => state.drawPoints);
   const drawRefine = useStudioStore((state) => state.drawRefine);
-  const outlinePoints = useStudioStore((state) => state.outlinePoints);
   const extrusionDepth = useStudioStore((state) => state.extrusionDepth);
   const setDrawPoints = useStudioStore((state) => state.setDrawPoints);
   const appendDrawPoint = useStudioStore((state) => state.appendDrawPoint);
@@ -37,7 +36,7 @@ export function DrawOverlay() {
     [drawPoints, drawRefine],
   );
 
-  const visible = mode === 'draw' && outlinePoints.length < 4;
+  const visible = mode === 'draw';
 
   const updateSize = () => {
     const bounds = ref.current?.getBoundingClientRect();
@@ -122,7 +121,7 @@ export function DrawOverlay() {
           </>
         ) : null}
       </svg>
-      <div className="draw-badge">Outline sketch · {drawRefine.plane.toUpperCase()}</div>
+      <div className="draw-badge">Outline sketch - {drawRefine.plane.toUpperCase()}</div>
       {refinedPoints.length > 3 ? (
         <div className="thickness-preview" aria-hidden="true">
           <svg viewBox="0 0 176 130">
